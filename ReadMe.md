@@ -8,6 +8,7 @@ Unlike traditional budgeting apps that only track spending, this app provides ac
 a. User Authentication & Profile Customization
 Users can register and set up a basic profile, including details like name, age, and income.
 A secure login system ensures data protection, while returning users can access their customized budget categories easily.
+
 b. Expense Tracking and Categorization
 Users can manually log daily expenses and categorize them (e.g., groceries, bills, entertainment).
 The app allows for custom category creation, giving users complete control over how they classify their spending.
