@@ -7,8 +7,8 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Rules from "./pages/Rules";
 import EditProfile from "./pages/EditProfile"
-const userRoutes = require('./userRoutes');
-app.use('/api', userRoutes); // This connects the /user route to the /api endpoint
+//const userRoutes = require('./userRoutes');
+//app.use('/api', userRoutes); // This connects the /user route to the /api endpoint
 
 function App() {
   return (
