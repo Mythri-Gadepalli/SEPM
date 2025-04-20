@@ -1,9 +1,7 @@
-// File: src/pages/Rules.js
-
 import React, { useState, useEffect, useContext } from "react";
 import Navbar from "../components/Navbar";
 import axios from "axios";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContext"; // Adjust path if needed
 
 const Rules = () => {
   const { user } = useContext(AuthContext);
@@ -11,9 +9,6 @@ const Rules = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [selectedRuleKey, setSelectedRuleKey] = useState(null);
   const [rulesMap, setRulesMap] = useState({});
-  const [showCustomizePopup, setShowCustomizePopup] = useState(false);
-  const [customInputs, setCustomInputs] = useState([]);
-  const [customRuleId, setCustomRuleId] = useState(null);
 
   const toggleRule = (ruleKey) => {
     setOpenRule(openRule === ruleKey ? null : ruleKey);
@@ -46,57 +41,160 @@ const Rules = () => {
 
     if (!rule.isCustomizable) {
       alert(`${rule.name} is not customizable because it depends entirely on user-created priorities or detailed allocations. Try selecting a customizable rule like 50/30/20 or 80/20 instead.`);
-      console.info("ℹ️ Attempted to customize non-customizable rule:", rule.name);
+      console.info("ℹ Attempted to customize non-customizable rule:", rule.name);
       return;
     }
 
     const defaultBreakdown = rule.defaultBreakdown || {};
-    const inputs = Object.keys(defaultBreakdown).map((category) => ({
-      category,
-      percentage: defaultBreakdown[category]
-    }));
+    const categories = Object.keys(defaultBreakdown);
+    let inputs = [];
 
-    setCustomInputs(inputs);
-    setCustomRuleId(rule._id);
-    setShowCustomizePopup(true);
-    console.log("🛠 Opened customization popup for:", rule.name);
-  };
+    console.log("🛠 Starting customization for:", rule.name);
 
-  const handleInputChange = (index, value) => {
-    const updatedInputs = [...customInputs];
-    updatedInputs[index].percentage = value;
-    setCustomInputs(updatedInputs);
-  };
+    for (let i = 0; i < categories.length; i++) {
+      const cat = categories[i];
+      const value = prompt(`${cat} % (Priority ${i + 1}):`, defaultBreakdown[cat]);
+      if (value === null) {
+        console.warn("🚫 User cancelled input for:", cat);
+        return;
+      }
+      const num = parseFloat(value);
+      if (isNaN(num)) {
+        alert("Please enter valid numbers only!");
+        console.warn("❌ Invalid number entered:", value);
+        return;
+      }
+      inputs.push({ category: cat, percentage: num });
+    }
 
-  const handleSaveCustomization = async () => {
-    const total = customInputs.reduce((acc, item) => acc + Number(item.percentage), 0);
+    const total = inputs.reduce((acc, item) => acc + item.percentage, 0);
     if (total !== 100) {
       alert("Percentages must add up to 100.");
-      console.warn("❌ Percentages do not add to 100:", customInputs);
+      console.warn("❌ Percentages do not add to 100:", inputs);
       return;
     }
 
+    console.log("✅ Custom inputs validated:", inputs);
+    await saveCustomizedRule(rule._id, inputs);
+  };
+
+  const saveCustomizedRule = async (ruleId, inputs) => {
+    const percentages = inputs.map(i => i.percentage);
+    const categories = inputs.map(i => i.category);
+
     const payload = {
       userId: user._id,
-      ruleId: customRuleId,
+      ruleId,
       customBreakdown: {
-        percentages: customInputs.map(i => Number(i.percentage)),
-        categories: customInputs.map(i => i.category),
-      },
+        percentages,
+        categories
+      }
     };
+
+    console.log("📦 Sending customization payload:", payload);
 
     try {
       await axios.post("/api/users/select-rule", payload);
       alert("Customized rule saved successfully!");
-      setShowCustomizePopup(false);
-      console.log("✅ Custom rule saved:", payload);
+      console.log("✅ Rule saved successfully");
     } catch (error) {
       alert("Failed to save customized rule.");
       console.error("❌ Error saving customized rule:", error);
     }
   };
 
-  const rules = [/* Same static rules array as before, unchanged */];
+  const rules = [
+    {
+      title: "50/30/20 Rule – Simple & Popular",
+      key: "50-30-20",
+      content: (
+        <>
+          <p>This rule divides your monthly after-tax income into three main categories:
+            <strong> 50% for Needs</strong>, <strong>30% for Wants</strong>, and
+            <strong>20% for Savings/Debt</strong>.
+          </p>
+          <p><strong>Example:</strong> If you earn ₹60,000/month:
+            <ul>
+              <li>₹30,000 → Needs</li>
+              <li>₹18,000 → Wants</li>
+              <li>₹12,000 → Savings</li>
+            </ul>
+          </p>
+          <p>It's great for beginners who want a balanced budget without getting too detailed.</p>
+        </>
+      ),
+    },
+    {
+      title: "Zero-Based Budgeting",
+      key: "zero-based",
+      content: (
+        <>
+          <p>Every rupee you earn is assigned a job — whether it's rent, food, savings, or fun.
+            <strong> Income - Expenses = 0</strong>
+          </p>
+          <p><strong>Example:</strong> ₹50,000/month:
+            <ul>
+              <li>₹20,000 → Rent</li>
+              <li>₹10,000 → Groceries</li>
+              <li>₹10,000 → Savings</li>
+              <li>₹10,000 → Misc</li>
+            </ul>
+          </p>
+        </>
+      ),
+    },
+    {
+      title: "80/20 Rule (Pay Yourself First)",
+      key: "80-20",
+      content: (
+        <>
+          <p>Save first, then spend the rest:
+            <strong> 20% Saving, 80% Living</strong>.
+          </p>
+          <p><strong>Example:</strong> ₹40,000/month:
+            <ul>
+              <li>₹8,000 → Save</li>
+              <li>₹32,000 → Spend</li>
+            </ul>
+          </p>
+        </>
+      ),
+    },
+    {
+      title: "70/20/10 Rule",
+      key: "70-20-10",
+      content: (
+        <>
+          <p>
+            <strong>70% Living, 20% Savings, 10% Giving</strong>.
+          </p>
+          <p><strong>Example:</strong> ₹1,00,000/month:
+            <ul>
+              <li>₹70,000 → Living</li>
+              <li>₹20,000 → Savings</li>
+              <li>₹10,000 → Giving</li>
+            </ul>
+          </p>
+        </>
+      ),
+    },
+    {
+      title: "Priority-Based Budgeting",
+      key: "priority",
+      content: (
+        <>
+          <p>You define your own categories and allocate based on priority.</p>
+          <p><strong>Example:</strong>
+            <ul>
+              <li>₹20,000 → Rent (P1)</li>
+              <li>₹10,000 → Travel (P2)</li>
+              <li>₹7,000 → Food (P3)</li>
+            </ul>
+          </p>
+        </>
+      ),
+    },
+  ];
 
   return (
     <div style={{ backgroundColor: "#F9FAFB", minHeight: "100vh", padding: "2rem", color: "#1F2937" }}>
@@ -168,7 +266,6 @@ const Rules = () => {
         </div>
       ))}
 
-      {/* Choose Rule Popup */}
       {showPopup && (
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
@@ -220,7 +317,7 @@ const Rules = () => {
                     console.log("✅ Rule selected without customization:", ruleObj.name);
                   } catch (err) {
                     console.error(err);
-                    alert(`Error selecting rule: ${err.response?.data?.message || err.message}`);
+                    alert(Error `selecting rule: ${err.response?.data?.message || err.message}`);
                   }
                   setShowPopup(false);
                 }}
@@ -237,67 +334,6 @@ const Rules = () => {
                 No, Continue
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Customize Rule Popup */}
-      {showCustomizePopup && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-          backgroundColor: "rgba(0,0,0,0.4)", display: "flex",
-          justifyContent: "center", alignItems: "center", zIndex: 999,
-        }}>
-          <div style={{
-            backgroundColor: "#fff", padding: "2rem", borderRadius: "12px",
-            maxWidth: "500px", width: "90%", textAlign: "center",
-          }}>
-            <h2 style={{ color: "#4F46E5", marginBottom: "1rem" }}>Customize Your Rule</h2>
-            {customInputs.map((input, index) => (
-              <div key={index} style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", marginBottom: "0.25rem", fontWeight: "bold" }}>
-                  {input.category} (%):
-                </label>
-                <input
-                  type="number"
-                  value={input.percentage}
-                  onChange={(e) => handleInputChange(index, e.target.value)}
-                  style={{
-                    width: "100%", padding: "0.5rem", borderRadius: "6px",
-                    border: "1px solid #ccc", fontSize: "1rem",
-                  }}
-                />
-              </div>
-            ))}
-            <button
-              onClick={handleSaveCustomization}
-              style={{
-                backgroundColor: "#10B981",
-                color: "#fff",
-                border: "none",
-                padding: "0.6rem 1.2rem",
-                borderRadius: "8px",
-                fontWeight: "bold",
-                cursor: "pointer",
-                marginRight: "1rem"
-              }}
-            >
-              Save Customization
-            </button>
-            <button
-              onClick={() => setShowCustomizePopup(false)}
-              style={{
-                backgroundColor: "#F97316",
-                color: "#fff",
-                border: "none",
-                padding: "0.6rem 1.2rem",
-                borderRadius: "8px",
-                fontWeight: "bold",
-                cursor: "pointer"
-              }}
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
